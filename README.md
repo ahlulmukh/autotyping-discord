@@ -7,7 +7,7 @@ This project is a Discord bot to interact with Discord to generate responses usi
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/yourusername/autotyping-discord.git
+   git clone https://github.com/ahlulmukh/autotyping-discord.git
    cd autotyping-discord
    ```
 
