@@ -37,8 +37,10 @@ class ChatBot {
       const response = await getChatGPTResponse(message.content, this.prompt);
 
       if (response) {
-        await message.reply(response.response);
-        log("success", `Message Sent To ${message.author.username}`);
+        setTimeout(async () => {
+          await message.reply(response.response);
+          log("success", `Message Sent To ${message.author.username}`);
+        }, this.config.replyDelay);
       }
     });
   }

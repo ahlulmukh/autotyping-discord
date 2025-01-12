@@ -17,13 +17,14 @@ This project is a Discord bot to interact with Discord to generate responses usi
    npm install
    ```
 
-3. copy `env.example` to `.env` file in the root directory with the following content:
+3. Copy `env.example` to `.env` file in the root directory with the following content:
 
    ```properties
    DISCORD_TOKEN=your_discord_token_here
    TARGET_CHANNEL_IDS=1287529004689260564,1287530870789636126
    CHATBOT_PROMPT=Reply in a casual and friendly style with modern slang.
    FILTER_CHAT=true
+   REPLY_DELAY=2000
    ```
 
 4. Run the bot:
@@ -36,7 +37,8 @@ This project is a Discord bot to interact with Discord to generate responses usi
 - **DISCORD_TOKEN**: Your Discord token.
 - **TARGET_CHANNEL_IDS**: Comma-separated list of channel IDs where the bot will listen for messages.
 - **CHATBOT_PROMPT**: The prompt used to generate responses.
-- **FILTER_CHAT**: true or false , if false, it will reply all message
+- **FILTER_CHAT**: true or false, if false, it will reply to all messages.
+- **REPLY_DELAY**: Delay in milliseconds before replying to a message.
 
 ## Get Token
 
