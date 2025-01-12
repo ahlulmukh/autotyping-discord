@@ -2,10 +2,11 @@ const { getChatGPTResponse } = require("./api/chatgpt");
 const { log } = require("./utils/logger");
 
 class ChatBot {
-  constructor(client, targetChannelIds, prompt) {
+  constructor(client, targetChannelIds, prompt, config) {
     this.client = client;
     this.targetChannelIds = targetChannelIds;
     this.prompt = prompt;
+    this.config = config;
     this.initialize();
   }
 
@@ -18,6 +19,15 @@ class ChatBot {
       if (!this.targetChannelIds.includes(message.channel.id)) return;
       if (message.author.bot || message.author.id === this.client.user.id)
         return;
+
+      if (
+        this.config.filterChat &&
+        !this.config.filterKeywords.some((keyword) =>
+          message.content.includes(keyword)
+        )
+      ) {
+        return;
+      }
 
       log(
         "info",
