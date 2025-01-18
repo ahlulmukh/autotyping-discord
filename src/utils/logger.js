@@ -13,4 +13,11 @@ function log(type, message) {
   console.log(colors[type](message));
 }
 
-module.exports = { log };
+function displayCountdown(channel, remainingTime) {
+  const countdownText = `Wait (${Math.ceil(remainingTime / 1000)}s) in #${
+    channel.name
+  } (${channel.guild.name})`;
+  process.stdout.write(`\r${countdownText}`);
+}
+
+module.exports = { log, displayCountdown };

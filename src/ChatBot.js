@@ -1,5 +1,5 @@
 const { getChatGPTResponse } = require("./api/chatgpt");
-const { log } = require("./utils/logger");
+const { log, displayCountdown } = require("./utils/logger");
 const fs = require("fs");
 const path = require("path");
 
@@ -12,6 +12,7 @@ class ChatBot {
     this.hasReplied = false;
     this.shuffledChatList = this.shuffleArray([...this.config.customChatList]);
     this.currentIndex = 0;
+    this.channelCooldowns = new Map();
     this.initialize();
     this.setupHotReload();
   }
@@ -37,13 +38,11 @@ class ChatBot {
             "info",
             `Message From ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${message.content}`
           );
-          setTimeout(async () => {
-            await message.reply(customResponse);
-            log(
-              "success",
-              `Custom Response Sent To ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${customResponse}`
-            );
-          }, this.config.replyDelay);
+          await message.reply(customResponse);
+          log(
+            "success",
+            `Custom Response Sent To ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${customResponse}`
+          );
           return;
         }
       }
@@ -65,13 +64,11 @@ class ChatBot {
         const response = await getChatGPTResponse(message.content, this.prompt);
 
         if (response) {
-          setTimeout(async () => {
-            await message.reply(response.response);
-            log(
-              "success",
-              `Message Sent To ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${response.response}`
-            );
-          }, this.config.replyDelay);
+          await message.reply(response.response);
+          log(
+            "success",
+            `Message Sent To ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${response.response}`
+          );
         }
       }
     });
@@ -115,14 +112,45 @@ class ChatBot {
       this.targetChannelIds.forEach((channelId) => {
         const channel = this.client.channels.cache.get(channelId);
         if (channel) {
+          const cooldown = this.getCooldownForChannel(channel);
+          const remainingCooldown = this.getRemainingCooldown(channel);
+
+          if (remainingCooldown > 0) {
+            displayCountdown(channel, remainingCooldown);
+            return;
+          }
+
+          process.stdout.write("\n");
           channel.send(message);
           log(
             "success",
             `Message Sent To #${channel.name} (${channel.guild.name}): ${message}`
           );
+
+          this.setCooldownForChannel(channel);
         }
       });
-    }, this.config.replyDelay);
+    }, 1000);
+  }
+
+  getCooldownForChannel(channel) {
+    if (this.config.useCustomCooldown) {
+      return this.config.customCooldown;
+    } else {
+      return channel.rateLimitPerUser * 1000 || 0;
+    }
+  }
+
+  getRemainingCooldown(channel) {
+    const cooldownEnd = this.channelCooldowns.get(channel.id) || 0;
+    return Math.max(0, cooldownEnd - Date.now());
+  }
+
+  setCooldownForChannel(channel) {
+    const cooldown = this.getCooldownForChannel(channel);
+    if (cooldown > 0) {
+      this.channelCooldowns.set(channel.id, Date.now() + cooldown);
+    }
   }
 
   setupHotReload() {
