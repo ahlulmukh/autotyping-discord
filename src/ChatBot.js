@@ -35,13 +35,13 @@ class ChatBot {
           this.hasReplied = true;
           log(
             "info",
-            `Message From ${message.author.username}: ${message.content}`
+            `Message From ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${message.content}`
           );
           setTimeout(async () => {
             await message.reply(customResponse);
             log(
               "success",
-              `Custom Response Sent To ${message.author.username}: ${customResponse}`
+              `Custom Response Sent To ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${customResponse}`
             );
           }, this.config.replyDelay);
           return;
@@ -60,14 +60,17 @@ class ChatBot {
       if (!this.config.useCustomChatList) {
         log(
           "info",
-          `Message From ${message.author.username}: ${message.content}`
+          `Message From ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${message.content}`
         );
         const response = await getChatGPTResponse(message.content, this.prompt);
 
         if (response) {
           setTimeout(async () => {
             await message.reply(response.response);
-            log("success", `Message Sent To ${message.author.username}`);
+            log(
+              "success",
+              `Message Sent To ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${response.response}`
+            );
           }, this.config.replyDelay);
         }
       }
@@ -113,7 +116,10 @@ class ChatBot {
         const channel = this.client.channels.cache.get(channelId);
         if (channel) {
           channel.send(message);
-          log("success", `Message Sent To Channel ${channelId}: ${message}`);
+          log(
+            "success",
+            `Message Sent To #${channel.name} (${channel.guild.name}): ${message}`
+          );
         }
       });
     }, this.config.replyDelay);
