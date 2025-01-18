@@ -31,6 +31,10 @@ class ChatBot {
         const customResponse = this.getCustomResponse(message.content);
         if (customResponse) {
           this.hasReplied = true;
+          log(
+            "info",
+            `Message From ${message.author.username}: ${message.content}`
+          );
           setTimeout(async () => {
             await message.reply(customResponse);
             log(
@@ -51,22 +55,19 @@ class ChatBot {
         return;
       }
 
-      log(
-        "info",
-        `Message From ${message.author.username}: ${message.content}`
-      );
+      if (!this.config.useCustomChatList) {
+        log(
+          "info",
+          `Message From ${message.author.username}: ${message.content}`
+        );
+        const response = await getChatGPTResponse(message.content, this.prompt);
 
-      if (this.config.useCustomChatList) {
-        return;
-      }
-
-      const response = await getChatGPTResponse(message.content, this.prompt);
-
-      if (response) {
-        setTimeout(async () => {
-          await message.reply(response.response);
-          log("success", `Message Sent To ${message.author.username}`);
-        }, this.config.replyDelay);
+        if (response) {
+          setTimeout(async () => {
+            await message.reply(response.response);
+            log("success", `Message Sent To ${message.author.username}`);
+          }, this.config.replyDelay);
+        }
       }
     });
   }
