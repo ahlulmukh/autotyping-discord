@@ -10,6 +10,8 @@ class ChatBot {
     this.prompt = prompt;
     this.config = config;
     this.hasReplied = false;
+    this.shuffledChatList = this.shuffleArray([...this.config.customChatList]);
+    this.currentIndex = 0;
     this.initialize();
     this.setupHotReload();
   }
@@ -82,6 +84,14 @@ class ChatBot {
     return null;
   }
 
+  shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
   startCustomChatList() {
     setInterval(() => {
       if (this.hasReplied) {
@@ -89,18 +99,21 @@ class ChatBot {
         return;
       }
 
-      const randomMessage =
-        this.config.customChatList[
-          Math.floor(Math.random() * this.config.customChatList.length)
-        ];
+      if (this.currentIndex >= this.shuffledChatList.length) {
+        this.shuffledChatList = this.shuffleArray([
+          ...this.config.customChatList,
+        ]);
+        this.currentIndex = 0;
+      }
+
+      const message = this.shuffledChatList[this.currentIndex];
+      this.currentIndex++;
+
       this.targetChannelIds.forEach((channelId) => {
         const channel = this.client.channels.cache.get(channelId);
         if (channel) {
-          channel.send(randomMessage);
-          log(
-            "success",
-            `Message Sent To Channel ${channelId}: ${randomMessage}`
-          );
+          channel.send(message);
+          log("success", `Message Sent To Channel ${channelId}: ${message}`);
         }
       });
     }, this.config.replyDelay);
@@ -113,6 +126,10 @@ class ChatBot {
         log("info", `File ${filename} changed. Reloading config...`);
         delete require.cache[require.resolve(configPath)];
         this.config = require(configPath);
+        this.shuffledChatList = this.shuffleArray([
+          ...this.config.customChatList,
+        ]);
+        this.currentIndex = 0;
         log("success", "Config reloaded successfully!");
       }
     });
