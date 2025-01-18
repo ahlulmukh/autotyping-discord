@@ -1,5 +1,7 @@
 const { getChatGPTResponse } = require("./api/chatgpt");
 const { log } = require("./utils/logger");
+const fs = require("fs");
+const path = require("path");
 
 class ChatBot {
   constructor(client, targetChannelIds, prompt, config) {
@@ -7,7 +9,9 @@ class ChatBot {
     this.targetChannelIds = targetChannelIds;
     this.prompt = prompt;
     this.config = config;
+    this.hasReplied = false;
     this.initialize();
+    this.setupHotReload();
   }
 
   initialize() {
@@ -22,6 +26,21 @@ class ChatBot {
       if (!this.targetChannelIds.includes(message.channel.id)) return;
       if (message.author.bot || message.author.id === this.client.user.id)
         return;
+
+      if (this.config.enableCustomResponse) {
+        const customResponse = this.getCustomResponse(message.content);
+        if (customResponse) {
+          this.hasReplied = true;
+          setTimeout(async () => {
+            await message.reply(customResponse);
+            log(
+              "success",
+              `Custom Response Sent To ${message.author.username}: ${customResponse}`
+            );
+          }, this.config.replyDelay);
+          return;
+        }
+      }
 
       if (
         this.config.filterChat &&
@@ -52,8 +71,23 @@ class ChatBot {
     });
   }
 
+  getCustomResponse(messageContent) {
+    const lowerCaseMessage = messageContent.toLowerCase();
+    for (const keyword in this.config.customResponses) {
+      if (lowerCaseMessage.includes(keyword)) {
+        return this.config.customResponses[keyword];
+      }
+    }
+    return null;
+  }
+
   startCustomChatList() {
     setInterval(() => {
+      if (this.hasReplied) {
+        this.hasReplied = false;
+        return;
+      }
+
       const randomMessage =
         this.config.customChatList[
           Math.floor(Math.random() * this.config.customChatList.length)
@@ -69,6 +103,18 @@ class ChatBot {
         }
       });
     }, this.config.replyDelay);
+  }
+
+  setupHotReload() {
+    const configPath = path.join(__dirname, "../src/utils/config.js");
+    fs.watch(configPath, (eventType, filename) => {
+      if (eventType === "change") {
+        log("info", `File ${filename} changed. Reloading config...`);
+        delete require.cache[require.resolve(configPath)];
+        this.config = require(configPath);
+        log("success", "Config reloaded successfully!");
+      }
+    });
   }
 }
 
