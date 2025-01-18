@@ -13,6 +13,9 @@ class ChatBot {
   initialize() {
     this.client.on("ready", () => {
       log("success", `Logged in as ${this.client.user.tag}`);
+      if (this.config.useCustomChatList) {
+        this.startCustomChatList();
+      }
     });
 
     this.client.on("messageCreate", async (message) => {
@@ -34,6 +37,10 @@ class ChatBot {
         `Message From ${message.author.username}: ${message.content}`
       );
 
+      if (this.config.useCustomChatList) {
+        return;
+      }
+
       const response = await getChatGPTResponse(message.content, this.prompt);
 
       if (response) {
@@ -43,6 +50,25 @@ class ChatBot {
         }, this.config.replyDelay);
       }
     });
+  }
+
+  startCustomChatList() {
+    setInterval(() => {
+      const randomMessage =
+        this.config.customChatList[
+          Math.floor(Math.random() * this.config.customChatList.length)
+        ];
+      this.targetChannelIds.forEach((channelId) => {
+        const channel = this.client.channels.cache.get(channelId);
+        if (channel) {
+          channel.send(randomMessage);
+          log(
+            "success",
+            `Message Sent To Channel ${channelId}: ${randomMessage}`
+          );
+        }
+      });
+    }, this.config.replyDelay);
   }
 }
 
