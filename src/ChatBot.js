@@ -1,7 +1,8 @@
 const { getChatGPTResponse } = require("./api/chatgpt");
-const { log, displayCountdown } = require("./utils/logger");
+const { log, displayCountdown, clearCountdown } = require("./utils/logger");
 const fs = require("fs");
 const path = require("path");
+const MarkovChain = require("./utils/markovChain");
 
 class ChatBot {
   constructor(client, targetChannelIds, prompt, config) {
@@ -13,15 +14,37 @@ class ChatBot {
     this.shuffledChatList = this.shuffleArray([...this.config.customChatList]);
     this.currentIndex = 0;
     this.channelCooldowns = new Map();
+    this.markovChain = new MarkovChain();
     this.initialize();
     this.setupHotReload();
+  }
+
+  getMessageForChannel(channelId) {
+    if (this.config.useMarkovChain && this.config.markovChainData[channelId]) {
+      return this.markovChain.generateMarkovMessage(channelId);
+    } else if (this.config.useCustomChatList) {
+      return this.config.customChatList[
+        Math.floor(Math.random() * this.config.customChatList.length)
+      ];
+    } else {
+      return "Hello!";
+    }
   }
 
   initialize() {
     this.client.on("ready", () => {
       log("success", `Logged in as ${this.client.user.tag}`);
-      if (this.config.useCustomChatList) {
+      if (this.config.useCustomChatList || this.config.useMarkovChain) {
         this.startCustomChatList();
+      }
+
+      if (this.config.useMarkovChain) {
+        for (const channelId in this.config.markovChainData) {
+          this.markovChain.trainMarkovChain(
+            channelId,
+            this.config.markovChainData[channelId]
+          );
+        }
       }
     });
 
@@ -56,7 +79,7 @@ class ChatBot {
         return;
       }
 
-      if (!this.config.useCustomChatList) {
+      if (!this.config.useCustomChatList && !this.config.useMarkovChain) {
         log(
           "info",
           `Message From ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${message.content}`
@@ -99,16 +122,6 @@ class ChatBot {
         return;
       }
 
-      if (this.currentIndex >= this.shuffledChatList.length) {
-        this.shuffledChatList = this.shuffleArray([
-          ...this.config.customChatList,
-        ]);
-        this.currentIndex = 0;
-      }
-
-      const message = this.shuffledChatList[this.currentIndex];
-      this.currentIndex++;
-
       this.targetChannelIds.forEach((channelId) => {
         const channel = this.client.channels.cache.get(channelId);
         if (channel) {
@@ -118,16 +131,21 @@ class ChatBot {
           if (remainingCooldown > 0) {
             displayCountdown(channel, remainingCooldown);
             return;
+          } else {
+            clearCountdown(channel.id);
           }
 
-          process.stdout.write("\n");
-          channel.send(message);
-          log(
-            "success",
-            `Message Sent To #${channel.name} (${channel.guild.name}): ${message}`
-          );
+          const message = this.getMessageForChannel(channelId);
+          if (message) {
+            process.stdout.write("\n");
+            channel.send(message);
+            log(
+              "success",
+              `Message Sent To #${channel.name} (${channel.guild.name}): ${message}`
+            );
 
-          this.setCooldownForChannel(channel);
+            this.setCooldownForChannel(channel);
+          }
         }
       });
     }, 1000);
