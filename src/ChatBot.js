@@ -2,7 +2,6 @@ const { getChatGPTResponse } = require("./api/chatgpt");
 const { log, displayCountdown, clearCountdown } = require("./utils/logger");
 const fs = require("fs");
 const path = require("path");
-const MarkovChain = require("./utils/markovChain");
 
 class ChatBot {
   constructor(client, targetChannelIds, prompt, config) {
@@ -14,15 +13,12 @@ class ChatBot {
     this.shuffledChatList = this.shuffleArray([...this.config.customChatList]);
     this.currentIndex = 0;
     this.channelCooldowns = new Map();
-    this.markovChain = new MarkovChain();
     this.initialize();
     this.setupHotReload();
   }
 
   getMessageForChannel(channelId) {
-    if (this.config.useMarkovChain && this.config.markovChainData[channelId]) {
-      return this.markovChain.generateMarkovMessage(channelId);
-    } else if (this.config.useCustomChatList) {
+    if (this.config.useCustomChatList) {
       return this.config.customChatList[
         Math.floor(Math.random() * this.config.customChatList.length)
       ];
@@ -34,17 +30,8 @@ class ChatBot {
   initialize() {
     this.client.on("ready", () => {
       log("success", `Logged in as ${this.client.user.tag}`);
-      if (this.config.useCustomChatList || this.config.useMarkovChain) {
+      if (this.config.useCustomChatList) {
         this.startCustomChatList();
-      }
-
-      if (this.config.useMarkovChain) {
-        for (const channelId in this.config.markovChainData) {
-          this.markovChain.trainMarkovChain(
-            channelId,
-            this.config.markovChainData[channelId]
-          );
-        }
       }
     });
 
@@ -79,12 +66,12 @@ class ChatBot {
         return;
       }
 
-      if (!this.config.useCustomChatList && !this.config.useMarkovChain) {
+      if (!this.config.useCustomChatList) {
         log(
           "info",
           `Message From ${message.author.username} in #${message.channel.name} (${message.guild.name}): ${message.content}`
         );
-        const response = await getChatGPTResponse(message.content, this.prompt);
+        const response = await getChatGPTResponse(message.content, this.text);
 
         if (response) {
           await message.reply(response.response);
