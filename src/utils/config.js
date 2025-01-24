@@ -1,9 +1,5 @@
 require("dotenv").config();
 
-const targetChannelIds = process.env.TARGET_CHANNEL_IDS
-  ? process.env.TARGET_CHANNEL_IDS.split(",")
-  : [];
-
 module.exports = {
   // Option Using ChatGPT
   filterChat: process.env.FILTER_CHAT === "true",
